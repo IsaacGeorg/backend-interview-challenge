@@ -4,6 +4,10 @@ import { Database } from '../db/database';
 import { TaskService } from './taskService';
 
 export class SyncService {
+  static addToSyncQueue // 1. Create sync queue item
+    (id: any, arg1: string, task: any) {
+      throw new Error('Method not implemented.');
+  }
   private apiUrl: string;
   
   constructor(

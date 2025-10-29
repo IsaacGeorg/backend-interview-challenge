@@ -5,6 +5,15 @@ import { Task, SyncQueueItem } from '../types';
 const sqlite = sqlite3.verbose();
 
 export class Database {
+  delete(arg0: string, id: string, deletedTask: Task) {
+    throw new Error('Method not implemented.');
+  }
+  update(arg0: string, id: string, updatedTask: Task) {
+    throw new Error('Method not implemented.');
+  }
+  insert(arg0: string, newTask: Task) {
+    throw new Error('Method not implemented.');
+  }
   private db: sqlite3.Database;
 
   constructor(filename: string = ':memory:') {
