@@ -5,15 +5,35 @@ import { Task, SyncQueueItem } from '../types';
 const sqlite = sqlite3.verbose();
 
 export class Database {
-  delete(arg0: string, id: string, deletedTask: Task) {
-    throw new Error('Method not implemented.');
+  getAll(table: string): Promise<any[]> {
+    const sql = `SELECT * FROM ${table}`;
+  return this.all(sql);
   }
-  update(arg0: string, id: string, updatedTask: Task) {
-    throw new Error('Method not implemented.');
+  async delete(table: string, id: string, deletedTask: Task): Promise <void> {
+    const sql = `DELETE FROM ${table} SET is_deleted = 1 WHERE id = ?`;
+    await this.run(sql, [id]);
   }
-  insert(arg0: string, newTask: Task) {
-    throw new Error('Method not implemented.');
+
+  async update(table: string, id: string, data: any): Promise<void> {
+
+  const keys = Object.keys(data);
+  const setClause = keys.map(k => `${k} = ?`).join(', ');
+  const values = [...Object.values(data), id];
+  const sql = `UPDATE ${table} SET ${setClause} WHERE id = ?`;
+  await this.run(sql, values);
+    
   }
+
+
+  async insert(table: string, data:any): Promise<void> {
+  const keys = Object.keys(data);
+  const placeholders = keys.map(() => '?').join(', ');
+  const values = Object.values(data);
+  const sql = `INSERT INTO ${table} (${keys.join(', ')}) VALUES (${placeholders})`;
+  await this.run(sql, values);
+  }
+
+
   private db: sqlite3.Database;
 
   constructor(filename: string = ':memory:') {

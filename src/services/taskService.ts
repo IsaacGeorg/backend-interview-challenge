@@ -28,10 +28,10 @@ export class TaskService {
     };
     
     // 4. Insert into database
-    this.db.insert('tasks', newTask);
+    await this.db.insert('tasks', newTask);
     // 5. Add to sync queue
     return newTask;
-    throw new Error('Not implemented');
+    
   }
 
 
@@ -53,9 +53,9 @@ export class TaskService {
       sync_status: 'pending', // mark for sync after offline update
     };
 
-    this.db.update('tasks', id, updatedTask);
-    return task;
-    throw new Error('Not implemented');
+    await this.db.update('tasks', id, updatedTask);
+    return updatedTask;
+    
   }
 
   async deleteTask(id: string): Promise<boolean> {
@@ -67,15 +67,23 @@ export class TaskService {
     // 5. Add to sync queue
 
     const task = await this.db.get('tasks', [id]);
-    if (!task) return false;
-    const deletedTask: Task = {
-      ...task,
+  if (!task) return false;
+
+  // 2️⃣ Create an updated version of the task
+  const deletedTask: Task = {
+    ...task,
     is_deleted: true,
     updated_at: new Date(),
-    sync_status: 'pending',
+    sync_status: 'pending', // Mark for sync on next online update
   };
 
-  this.db.delete('tasks', id, deletedTask);
+  // 3️ Update the record (don’t remove it)
+  await this.db.update('tasks', id, deletedTask);
+
+  // 4️ Optionally: add to sync queue for deletion sync
+  // If you have a SyncService instance, call:
+  // await this.syncService.addToSyncQueue(id, 'delete', deletedTask);
+
   return true;
   }
 
@@ -83,18 +91,44 @@ export class TaskService {
     // TODO: Implement get single task
     // 1. Query database for task by id
     // 2. Return null if not found or is_deleted is true
-    throw new Error('Not implemented');
+
+    // 1. Query the local database for the task by its ID
+  const task = await this.db.get('tasks', [id]); // wrap in array if db expects key array
+
+  // 2. If no task found OR it's marked as deleted, return null
+  if (!task || task.is_deleted) {
+    return null;
+  }
+
+  return task;
   }
 
   async getAllTasks(): Promise<Task[]> {
     // TODO: Implement get all non-deleted tasks
     // 1. Query database for all tasks where is_deleted = false
     // 2. Return array of tasks
-    throw new Error('Not implemented');
+
+    // 1. Fetch all tasks from the local DB
+  const tasks = await this.db.getAll('tasks');
+
+  // 2. Return only tasks that are not deleted
+  return tasks.filter((t: Task) => !t.is_deleted);
   }
+
 
   async getTasksNeedingSync(): Promise<Task[]> {
     // TODO: Get all tasks with sync_status = 'pending' or 'error'
-    throw new Error('Not implemented');
+
+    // 1. Get all tasks
+  const tasks = await this.db.getAll('tasks');
+
+  // 2. Return only those that need syncing
+  // (status pending or error — depending on your sync system)
+  return tasks.filter(
+    (t: Task) =>
+      t.sync_status === 'pending' ||
+      t.sync_status === 'error'
+  );
+    
   }
 }

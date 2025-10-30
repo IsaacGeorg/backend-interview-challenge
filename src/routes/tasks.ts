@@ -31,14 +31,35 @@ export function createTaskRouter(db: Database): Router {
     }
   });
 
+
+
   // Create task
   router.post('/', async (req: Request, res: Response) => {
     // TODO: Implement task creation endpoint
     // 1. Validate request body
     // 2. Call taskService.createTask()
     // 3. Return created task
-    res.status(501).json({ error: 'Not implemented' });
+
+    try {
+      const { title, description } = req.body;
+      if (!title) {
+        return res.status(400).json({ error: 'Title is required' });
+      }
+
+      // 1. Create the task locally
+      const newTask = await taskService.createTask({ title, description });
+
+      // 2. Add to sync queue (for online sync later)
+      await syncService.addToSyncQueue(newTask.id, 'create', newTask);
+
+      res.status(201).json(newTask);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to create task' });
+    }
+    
   });
+
+
 
   // Update task
   router.put('/:id', async (req: Request, res: Response) => {
@@ -47,8 +68,24 @@ export function createTaskRouter(db: Database): Router {
     // 2. Call taskService.updateTask()
     // 3. Handle not found case
     // 4. Return updated task
-    res.status(501).json({ error: 'Not implemented' });
+
+    try {
+      const updatedTask = await taskService.updateTask(req.params.id, req.body);
+      if (!updatedTask) {
+        return res.status(404).json({ error: 'Task not found' });
+      }
+
+      // Add to sync queue for update
+      await syncService.addToSyncQueue(req.params.id, 'update', updatedTask);
+
+      res.json(updatedTask);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to update task' });
+    }
   });
+
+
+
 
   // Delete task
   router.delete('/:id', async (req: Request, res: Response) => {
@@ -56,7 +93,17 @@ export function createTaskRouter(db: Database): Router {
     // 1. Call taskService.deleteTask()
     // 2. Handle not found case
     // 3. Return success response
-    res.status(501).json({ error: 'Not implemented' });
+
+    try {
+      const success = await taskService.deleteTask(req.params.id);
+      if (!success) return res.status(404).json({ error: 'Task not found' });
+
+      await syncService.addToSyncQueue(req.params.id, 'delete', { id: req.params.id });
+      res.json({ success: true });
+
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to delete task' });
+    }
   });
 
   return router;
