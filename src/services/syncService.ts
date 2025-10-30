@@ -138,40 +138,40 @@ export class SyncService {
     const batchPayload = items.map(item => ({
     task_id: item.task_id,
     operation: item.operation,
-    data: JSON.parse(item.data)
+    data: JSON.parse(item.data),
   }));
 
   try {
-    // Send batch to server (example endpoint)
     const response = await axios.post(`${this.apiUrl}/sync/batch`, { items: batchPayload });
+    const { processed_items } = response.data as BatchSyncResponse;
 
-    const { success, results } = response.data;
-
-    // Process response
-    for (const result of results) {
-      const item = items.find(i => i.task_id === result.task_id);
+    // Handle each processed item
+    for (const result of processed_items) {
+      const item = items.find(i => i.task_id === result.client_id);
       if (!item) continue;
 
       if (result.status === 'success') {
-        await this.updateSyncStatus(result.task_id, 'synced', result.serverData);
+        await this.updateSyncStatus(result.client_id, 'synced', result.resolved_data);
       } else if (result.status === 'conflict') {
         const localTask = JSON.parse(item.data);
-        const resolvedTask = await this.resolveConflict(localTask, result.serverData);
-        await this.updateSyncStatus(result.task_id, 'synced', resolvedTask);
+        const resolvedTask = await this.resolveConflict(localTask, result.resolved_data!);
+        await this.updateSyncStatus(result.client_id, 'synced', resolvedTask);
       } else {
         await this.handleSyncError(item, new Error(result.error || 'Unknown error'));
       }
     }
 
-    return { success, synced: results.filter((r: any) => r.status === 'success').length, failed: results.filter((r: any) => r.status !== 'success').length };
+    //  Return correct object according to interface
+    return { processed_items };
 
   } catch (error) {
     console.error('Batch sync failed:', error);
-    // Mark all items in this batch as failed
     for (const item of items) {
       await this.handleSyncError(item, error as Error);
     }
-    return { success: false, synced: 0, failed: items.length };
+
+    // On error, return empty processed_items
+    return { processed_items: [] };
   }
   }
 

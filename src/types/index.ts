@@ -15,7 +15,7 @@ export interface SyncQueueItem {
   id: string;
   task_id: string;
   operation: 'create' | 'update' | 'delete';
-  data: Partial<Task>;
+  data: string;
   created_at: Date;
   retry_count: number;
   error_message?: string;
