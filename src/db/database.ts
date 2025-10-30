@@ -9,8 +9,8 @@ export class Database {
     const sql = `SELECT * FROM ${table}`;
   return this.all(sql);
   }
-  async delete(table: string, id: string, deletedTask: Task): Promise <void> {
-    const sql = `DELETE FROM ${table} SET is_deleted = 1 WHERE id = ?`;
+  async delete(table: string, id: string): Promise <void> {
+    const sql = `UPDATE ${table} SET is_deleted = 1, updated_at=CURRENT_TIMESTAMP WHERE id = ?`;
     await this.run(sql, [id]);
   }
 

@@ -43,7 +43,7 @@ export class TaskService {
     // 4. Set sync_status to 'pending'
     // 5. Add to sync queue
 
-    const task = await this.db.get('tasks', [id]);
+    const task = await this.db.get('SELECT * FROM tasks WHERE id = ?', [id]);
     if (!task) return null;
 
     const updatedTask: Task = {
@@ -66,7 +66,7 @@ export class TaskService {
     // 4. Set sync_status to 'pending'
     // 5. Add to sync queue
 
-    const task = await this.db.get('tasks', [id]);
+    const task = await this.db.get('SELECT * FROM tasks WHERE id = ?', [id]);
   if (!task) return false;
 
   // 2️⃣ Create an updated version of the task
@@ -93,7 +93,7 @@ export class TaskService {
     // 2. Return null if not found or is_deleted is true
 
     // 1. Query the local database for the task by its ID
-  const task = await this.db.get('tasks', [id]); // wrap in array if db expects key array
+  const task = await this.db.get('SELECT * FROM tasks WHERE id = ?', [id]); // wrap in array if db expects key array
 
   // 2. If no task found OR it's marked as deleted, return null
   if (!task || task.is_deleted) {

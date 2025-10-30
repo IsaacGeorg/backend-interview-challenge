@@ -30,7 +30,7 @@ export class SyncService {
     const queueItems: SyncQueueItem[] = await this.db.all(`SELECT * FROM sync_queue`);
     if (queueItems.length === 0) {
       return {
-        success: true,
+        success: false,
         synced_items: 0,
         failed_items: 0,
         errors: [],
@@ -53,14 +53,15 @@ export class SyncService {
       try {
         const result = await this.processBatch(batch); // TODO: implement next
         result.processed_items.forEach((item) => {
-          if (item.status === 'success') synced++;
-          else failed++;
+          if (item.status === 'success') {
+            synced++;
+          }else failed++;
 
           if (item.error) {
             errors.push({
               task_id: item.client_id,
-              operation: 'unknown',
-              error: item.error,
+              operation: 'sync',
+              error: item.error || 'Unknown sync error',
               timestamp: new Date(),
             });
           }
@@ -68,8 +69,8 @@ export class SyncService {
       } catch (err: any) {
         failed += batch.length;
         errors.push({
-          task_id: 'unknown',
-          operation: 'batch',
+          task_id: 'batch',
+          operation: 'sync',
           error: err.message,
           timestamp: new Date(),
         });
@@ -77,14 +78,16 @@ export class SyncService {
     }
 
     // 4️⃣ Return result summary
+    const overallSuccess = failed === 0 && errors.length === 0;
     return {
-      success: failed === 0,
+      success: overallSuccess,
       synced_items: synced,
       failed_items: failed,
       errors,
     };
   } catch (error: any) {
     // Catch unexpected database or logic errors
+    
     return {
       success: false,
       synced_items: 0,
@@ -166,12 +169,20 @@ export class SyncService {
 
   } catch (error) {
     console.error('Batch sync failed:', error);
+
+    const failedResults = items.map(item => ({
+      client_id: item.task_id,
+      server_id: '',
+      status: 'error' as const,
+      error: (error as Error).message || 'Batch sync failed',
+    }));
+
     for (const item of items) {
       await this.handleSyncError(item, error as Error);
     }
 
     // On error, return empty processed_items
-    return { processed_items: [] };
+    return { processed_items: failedResults };
   }
   }
 
